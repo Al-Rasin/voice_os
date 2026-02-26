@@ -62,16 +62,16 @@ class _HomeScreenState extends State<HomeScreen>
   void _onAirGestureDetected(AirGesture gesture) async {
     switch (gesture) {
       case AirGesture.swipeLeft:
-        await NativeBridge.executeAction({'type': 'back'});
+        await NativeBridge.executeAction({'type': 'press_back'});
         break;
       case AirGesture.swipeRight:
-        await NativeBridge.executeAction({'type': 'recents'});
+        await NativeBridge.executeAction({'type': 'press_recents'});
         break;
       case AirGesture.swipeUp:
-        await NativeBridge.executeAction({'type': 'scroll', 'direction': 'down'});
+        await NativeBridge.executeAction({'type': 'swipe_up'});
         break;
       case AirGesture.swipeDown:
-        await NativeBridge.executeAction({'type': 'scroll', 'direction': 'up'});
+        await NativeBridge.executeAction({'type': 'swipe_down'});
         break;
       case AirGesture.tap:
         // Tap gesture could trigger mic

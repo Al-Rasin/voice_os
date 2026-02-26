@@ -5,6 +5,7 @@ import '../models/pipeline_result.dart';
 import '../services/action_executor.dart';
 import '../services/app_resolver_service.dart';
 import '../services/command_pipeline.dart';
+import '../services/llm/response_parser.dart';
 
 class CommandProvider extends ChangeNotifier {
   final AppResolverService _appResolver = AppResolverService();
@@ -80,15 +81,19 @@ class CommandProvider extends ChangeNotifier {
     return '${actions.length} actions executed';
   }
 
-  String _describeAction(dynamic action) {
-    final type = action.type as String;
-    switch (type) {
+  String _describeAction(ParsedAction action) {
+    switch (action.type) {
       case 'open_app':
-        return 'Opened ${action.params['app_name']}';
+        return 'Opened ${action.params['app_name'] ?? 'app'}';
       case 'search_web':
-        return 'Searched: ${action.params['query']}';
+        return 'Searched: ${action.params['query'] ?? ''}';
+      case 'search_youtube':
+      case 'play_youtube':
+        return 'YouTube: ${action.params['query'] ?? ''}';
       case 'set_alarm':
-        return 'Set alarm for ${action.params['hour']}:${action.params['minute']?.toString().padLeft(2, '0') ?? '00'}';
+        final hour = action.params['hour'] ?? 0;
+        final minute = action.params['minute']?.toString().padLeft(2, '0') ?? '00';
+        return 'Set alarm for $hour:$minute';
       case 'set_timer':
         final seconds = action.params['seconds'] as int? ?? 0;
         return 'Set timer for ${seconds ~/ 60} min';
@@ -103,7 +108,7 @@ class CommandProvider extends ChangeNotifier {
       case 'none':
         return 'Responded';
       default:
-        return type.replaceAll('_', ' ');
+        return action.type.replaceAll('_', ' ');
     }
   }
 

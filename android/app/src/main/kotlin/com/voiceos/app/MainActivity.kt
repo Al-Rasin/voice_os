@@ -75,6 +75,11 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
+        // First check if the service instance is actually running
+        if (VoiceOSAccessibilityService.isRunning && VoiceOSAccessibilityService.instance != null) {
+            return true
+        }
+
         val accessibilityEnabled = try {
             Settings.Secure.getInt(
                 contentResolver,
@@ -96,11 +101,16 @@ class MainActivity : FlutterActivity() {
         val colonSplitter = TextUtils.SimpleStringSplitter(':')
         colonSplitter.setString(serviceString)
 
-        val serviceName = "$packageName/.VoiceOSAccessibilityService"
+        // Check multiple possible formats
+        val serviceNames = listOf(
+            "$packageName/.VoiceOSAccessibilityService",
+            "$packageName/com.voiceos.app.VoiceOSAccessibilityService",
+            "$packageName/$packageName.VoiceOSAccessibilityService"
+        )
 
         while (colonSplitter.hasNext()) {
             val componentName = colonSplitter.next()
-            if (componentName.equals(serviceName, ignoreCase = true) ||
+            if (serviceNames.any { componentName.equals(it, ignoreCase = true) } ||
                 componentName.contains("VoiceOSAccessibilityService", ignoreCase = true)) {
                 return true
             }
