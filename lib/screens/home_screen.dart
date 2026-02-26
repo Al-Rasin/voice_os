@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
+import '../providers/accessibility_provider.dart';
+import '../providers/settings_provider.dart';
 import '../providers/voice_provider.dart';
 import 'settings_screen.dart';
 
@@ -117,7 +119,8 @@ class _HomeScreenState extends State<HomeScreen>
 
             return Column(
               children: [
-                const SizedBox(height: 16),
+                // Status banner
+                _buildStatusBanner(context),
 
                 // Main content area
                 Expanded(
@@ -155,6 +158,64 @@ class _HomeScreenState extends State<HomeScreen>
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildStatusBanner(BuildContext context) {
+    return Consumer2<AccessibilityProvider, SettingsProvider>(
+      builder: (context, accessibilityProvider, settingsProvider, child) {
+        final isEnabled = accessibilityProvider.isServiceEnabled;
+        final providerName = settingsProvider.currentProvider?.name ?? 'Not set';
+        final modelName = settingsProvider.currentModel?.displayName ?? '';
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: isEnabled ? Colors.green.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
+          child: Row(
+            children: [
+              Icon(
+                isEnabled ? Icons.check_circle : Icons.warning,
+                size: 16,
+                color: isEnabled ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isEnabled
+                      ? 'Accessibility Active'
+                      : 'Accessibility Service Required',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isEnabled ? Colors.green : Colors.orange,
+                  ),
+                ),
+              ),
+              if (!isEnabled)
+                TextButton(
+                  onPressed: () => accessibilityProvider.openSettings(),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Enable',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                )
+              else
+                Text(
+                  '$providerName${modelName.isNotEmpty ? " • $modelName" : ""}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.white54,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
