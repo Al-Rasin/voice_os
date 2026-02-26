@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
 import 'providers/settings_provider.dart';
+import 'providers/voice_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,14 +24,25 @@ void main() async {
     ),
   );
 
-  // Initialize settings provider
+  // Initialize providers
   final settingsProvider = SettingsProvider();
   await settingsProvider.init();
+
+  final voiceProvider = VoiceProvider();
+  await voiceProvider.init();
+
+  // Apply settings to voice provider
+  voiceProvider.setSettings(
+    vibrateOnCommand: settingsProvider.vibrateOnCommand,
+    speakResponses: settingsProvider.speakResponses,
+    speechRate: settingsProvider.speechRate,
+  );
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: settingsProvider),
+        ChangeNotifierProvider.value(value: voiceProvider),
       ],
       child: const VoiceOSApp(),
     ),
