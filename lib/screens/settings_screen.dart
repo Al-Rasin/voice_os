@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/app_settings.dart';
 import '../models/llm_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/llm/llm_client_factory.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _apiKeyController;
   bool _obscureApiKey = true;
   bool _hasUnsavedChanges = false;
+  bool _isTesting = false;
 
   // Local state for editing
   late String _selectedProviderId;
@@ -87,6 +90,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _testConnection() async {
+    if (_apiKeyController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter an API key first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isTesting = true;
+    });
+
+    try {
+      final testSettings = AppSettings(
+        selectedProviderId: _selectedProviderId,
+        selectedModelId: _selectedModelId,
+        apiKey: _apiKeyController.text,
+      );
+
+      final client = LLMClientFactory.createClient(testSettings);
+      final response = await client.sendMessage(
+        systemPrompt: 'You are a helpful assistant.',
+        userMessage: 'Respond with only: Connection successful',
+        temperature: 0.0,
+        maxTokens: 50,
+      );
+
+      if (mounted) {
+        if (response.success) {
+          _showConnectionDialog(
+            success: true,
+            message: 'Connection successful!\n\nResponse: ${response.rawText}',
+          );
+        } else {
+          _showConnectionDialog(
+            success: false,
+            message: 'Connection failed:\n\n${response.error}',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showConnectionDialog(
+          success: false,
+          message: 'Error: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTesting = false;
+        });
+      }
+    }
+  }
+
+  void _showConnectionDialog({required bool success, required String message}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Icon(
+          success ? Icons.check_circle : Icons.error,
+          color: success ? Colors.green : Colors.red,
+          size: 48,
+        ),
+        title: Text(success ? 'Success' : 'Failed'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -415,16 +498,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Test connection - will be implemented in Phase 3
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Connection test will be available after LLM integration'),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.wifi_tethering),
-                label: const Text('Test Connection'),
+                onPressed: _isTesting ? null : _testConnection,
+                icon: _isTesting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.wifi_tethering),
+                label: Text(_isTesting ? 'Testing...' : 'Test Connection'),
               ),
             ),
           ],
