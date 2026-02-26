@@ -6,6 +6,7 @@ import '../providers/accessibility_provider.dart';
 import '../providers/command_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/voice_provider.dart';
+import 'history_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -133,6 +134,15 @@ class _HomeScreenState extends State<HomeScreen>
       appBar: AppBar(
         title: const Text('VoiceOS'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HistoryScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
