@@ -1,0 +1,49 @@
+name: voice_os
+description: "VoiceOS - Universal Voice Control Android App"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  provider: ^6.1.2
+
+  # Local storage
+  shared_preferences: ^2.3.0
+
+  # Encrypted API key storage
+  flutter_secure_storage: ^9.2.0
+
+  # HTTP client for LLM APIs
+  http: ^1.2.0
+
+  # Voice recognition
+  speech_to_text: ^6.6.0
+
+  # Text-to-speech
+  flutter_tts: ^4.0.0
+
+  # Runtime permissions
+  permission_handler: ^11.3.0
+
+  # Unique IDs
+  uuid: ^4.4.0
+
+  # Date formatting
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
