@@ -66,15 +66,18 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     _pulseController.dispose();
-    // Remove listener
-    if (mounted) {
-      try {
-        context.read<VoiceProvider>().removeListener(_onVoiceStateChanged);
-      } catch (e) {
-        // Provider may not be available
-      }
-    }
     super.dispose();
+  }
+
+  @override
+  void deactivate() {
+    // Remove listener when widget is deactivated
+    try {
+      context.read<VoiceProvider>().removeListener(_onVoiceStateChanged);
+    } catch (e) {
+      // Provider may not be available
+    }
+    super.deactivate();
   }
 
   Future<void> _handleMicTap() async {

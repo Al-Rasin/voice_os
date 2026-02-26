@@ -230,6 +230,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSectionHeader('Floating Widget'),
             const SizedBox(height: 12),
             _buildFloatingWidgetSettings(),
+            const SizedBox(height: 24),
+
+            // Section 6: About
+            _buildSectionHeader('About'),
+            const SizedBox(height: 12),
+            _buildAboutSection(),
             const SizedBox(height: 32),
 
             // Save Button
@@ -527,6 +533,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : const Icon(Icons.wifi_tethering),
                 label: Text(_isTesting ? 'Testing...' : 'Test Connection'),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAboutSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.mic,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'VoiceOS',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Version 1.0.0',
+                        style: TextStyle(
+                          color: Colors.white54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Universal voice control for your Android phone. '
+              'Powered by AI to understand natural language commands.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.code, size: 20),
+              title: const Text('Source Code'),
+              subtitle: const Text('github.com/Al-Rasin/voice_os'),
+              dense: true,
             ),
           ],
         ),

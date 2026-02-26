@@ -46,6 +46,15 @@ void main() async {
     speechRate: settingsProvider.speechRate,
   );
 
+  // Sync settings changes to voice provider
+  settingsProvider.addListener(() {
+    voiceProvider.setSettings(
+      vibrateOnCommand: settingsProvider.vibrateOnCommand,
+      speakResponses: settingsProvider.speakResponses,
+      speechRate: settingsProvider.speechRate,
+    );
+  });
+
   runApp(
     MultiProvider(
       providers: [
