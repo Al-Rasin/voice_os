@@ -146,53 +146,105 @@ class MainActivity : FlutterActivity() {
 
     private fun executeIntent(intentData: Map<*, *>): Boolean {
         val type = intentData["type"] as? String ?: return false
+        val executor = IntentExecutor(this)
 
         return try {
             when (type) {
                 "open_app" -> {
                     val packageName = intentData["packageName"] as? String ?: return false
-                    openApp(packageName)
+                    executor.openApp(packageName)
                 }
                 "search_web" -> {
                     val query = intentData["query"] as? String ?: return false
-                    searchWeb(query)
+                    executor.searchWeb(query)
                 }
                 "open_url" -> {
                     val url = intentData["url"] as? String ?: return false
-                    openUrl(url)
+                    executor.openUrl(url)
+                }
+                "make_call" -> {
+                    val number = intentData["number"] as? String ?: return false
+                    executor.makePhoneCall(number)
+                }
+                "dial" -> {
+                    val number = intentData["number"] as? String ?: return false
+                    executor.dialPhoneNumber(number)
+                }
+                "send_sms" -> {
+                    val number = intentData["number"] as? String ?: return false
+                    val message = intentData["message"] as? String ?: ""
+                    executor.sendSMS(number, message)
+                }
+                "share_text" -> {
+                    val text = intentData["text"] as? String ?: return false
+                    executor.shareText(text)
+                }
+                "set_alarm" -> {
+                    val hour = (intentData["hour"] as? Number)?.toInt() ?: return false
+                    val minute = (intentData["minute"] as? Number)?.toInt() ?: 0
+                    val message = intentData["message"] as? String ?: "Alarm"
+                    executor.setAlarm(hour, minute, message)
+                }
+                "set_timer" -> {
+                    val seconds = (intentData["seconds"] as? Number)?.toInt() ?: return false
+                    val message = intentData["message"] as? String ?: "Timer"
+                    executor.setTimer(seconds, message)
+                }
+                "set_reminder" -> {
+                    val title = intentData["title"] as? String ?: return false
+                    val timeInMillis = (intentData["timeInMillis"] as? Number)?.toLong() ?: return false
+                    executor.setReminder(title, timeInMillis)
+                }
+                "add_calendar_event" -> {
+                    val title = intentData["title"] as? String ?: return false
+                    val description = intentData["description"] as? String ?: ""
+                    val startTime = (intentData["startTime"] as? Number)?.toLong() ?: return false
+                    val endTime = (intentData["endTime"] as? Number)?.toLong() ?: return false
+                    val location = intentData["location"] as? String
+                    executor.addCalendarEvent(title, description, startTime, endTime, location)
+                }
+                "play_youtube" -> {
+                    val videoId = intentData["videoId"] as? String
+                    if (videoId != null) {
+                        executor.playYouTubeVideo(videoId)
+                    } else {
+                        val query = intentData["query"] as? String ?: return false
+                        executor.searchYouTube(query)
+                    }
+                }
+                "search_youtube" -> {
+                    val query = intentData["query"] as? String ?: return false
+                    executor.searchYouTube(query)
+                }
+                "send_whatsapp" -> {
+                    val phone = intentData["phone"] as? String ?: return false
+                    val message = intentData["message"] as? String ?: ""
+                    executor.sendWhatsApp(phone, message)
+                }
+                "open_whatsapp" -> executor.openWhatsApp()
+                "compose_email" -> {
+                    val to = intentData["to"] as? String ?: return false
+                    val subject = intentData["subject"] as? String ?: ""
+                    val body = intentData["body"] as? String ?: ""
+                    executor.composeEmail(to, subject, body)
+                }
+                "open_maps" -> {
+                    val query = intentData["query"] as? String ?: return false
+                    executor.openMaps(query)
+                }
+                "navigate_to" -> {
+                    val destination = intentData["destination"] as? String ?: return false
+                    executor.navigate(destination)
+                }
+                "open_spotify" -> {
+                    val query = intentData["query"] as? String
+                    executor.openSpotify(query)
                 }
                 else -> false
             }
         } catch (e: Exception) {
             false
         }
-    }
-
-    private fun openApp(packageName: String): Boolean {
-        val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return false
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(intent)
-        return true
-    }
-
-    private fun searchWeb(query: String): Boolean {
-        val intent = Intent(Intent.ACTION_WEB_SEARCH)
-        intent.putExtra("query", query)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return try {
-            startActivity(intent)
-            true
-        } catch (e: Exception) {
-            // Fallback to browser
-            openUrl("https://www.google.com/search?q=$query")
-        }
-    }
-
-    private fun openUrl(url: String): Boolean {
-        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(intent)
-        return true
     }
 
     private fun getInstalledApps(): List<Map<String, String>> {
