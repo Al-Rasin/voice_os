@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/llm_provider.dart';
+import '../providers/settings_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -8,78 +11,82 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Selected provider
-  String _selectedProvider = 'openai';
-  String _selectedModel = 'gpt-4o';
-
-  // API Key
-  final _apiKeyController = TextEditingController();
+  late TextEditingController _apiKeyController;
   bool _obscureApiKey = true;
+  bool _hasUnsavedChanges = false;
 
-  // Voice settings
-  bool _speakResponses = true;
-  double _speechRate = 1.0;
-  bool _vibrateOnCommand = true;
+  // Local state for editing
+  late String _selectedProviderId;
+  late String _selectedModelId;
+  late bool _speakResponses;
+  late double _speechRate;
+  late bool _vibrateOnCommand;
+  late double _temperature;
 
-  // Advanced
-  double _temperature = 0.3;
+  @override
+  void initState() {
+    super.initState();
+    _apiKeyController = TextEditingController();
+    _loadCurrentSettings();
+  }
 
-  // Provider options
-  final List<Map<String, dynamic>> _providers = [
-    {
-      'id': 'openai',
-      'name': 'OpenAI',
-      'icon': Icons.psychology,
-      'models': ['gpt-4o', 'gpt-4o-mini'],
-    },
-    {
-      'id': 'anthropic',
-      'name': 'Anthropic Claude',
-      'icon': Icons.auto_awesome,
-      'models': ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'],
-    },
-    {
-      'id': 'gemini',
-      'name': 'Google Gemini',
-      'icon': Icons.star,
-      'models': ['gemini-2.0-flash', 'gemini-2.5-pro'],
-    },
-    {
-      'id': 'groq',
-      'name': 'Groq',
-      'icon': Icons.bolt,
-      'models': ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
-    },
-    {
-      'id': 'deepseek',
-      'name': 'DeepSeek',
-      'icon': Icons.search,
-      'models': ['deepseek-chat'],
-    },
-    {
-      'id': 'openrouter',
-      'name': 'OpenRouter',
-      'icon': Icons.public,
-      'models': [
-        'anthropic/claude-sonnet-4',
-        'google/gemini-2.0-flash-001',
-        'meta-llama/llama-3.3-70b-instruct'
-      ],
-    },
-  ];
-
-  List<String> get _currentModels {
-    final provider = _providers.firstWhere(
-      (p) => p['id'] == _selectedProvider,
-      orElse: () => _providers.first,
-    );
-    return List<String>.from(provider['models']);
+  void _loadCurrentSettings() {
+    final settings = context.read<SettingsProvider>().settings;
+    _selectedProviderId = settings.selectedProviderId;
+    _selectedModelId = settings.selectedModelId;
+    _apiKeyController.text = settings.apiKey;
+    _speakResponses = settings.speakResponses;
+    _speechRate = settings.speechRate;
+    _vibrateOnCommand = settings.vibrateOnCommand;
+    _temperature = settings.temperature;
   }
 
   @override
   void dispose() {
     _apiKeyController.dispose();
     super.dispose();
+  }
+
+  List<LLMModel> get _currentModels {
+    final provider = LLMProvider.getById(_selectedProviderId);
+    return provider?.models ?? [];
+  }
+
+  void _markChanged() {
+    if (!_hasUnsavedChanges) {
+      setState(() {
+        _hasUnsavedChanges = true;
+      });
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    final settingsProvider = context.read<SettingsProvider>();
+
+    await settingsProvider.updateSettings(
+      settingsProvider.settings.copyWith(
+        selectedProviderId: _selectedProviderId,
+        selectedModelId: _selectedModelId,
+        apiKey: _apiKeyController.text,
+        speakResponses: _speakResponses,
+        speechRate: _speechRate,
+        vibrateOnCommand: _vibrateOnCommand,
+        temperature: _temperature,
+      ),
+    );
+
+    setState(() {
+      _hasUnsavedChanges = false;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Settings saved'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   @override
@@ -127,12 +134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Save settings
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Settings saved')),
-                  );
-                },
+                onPressed: _saveSettings,
                 child: const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Text('Save', style: TextStyle(fontSize: 16)),
@@ -160,17 +162,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(
-          children: _providers.map((provider) {
-            final isSelected = _selectedProvider == provider['id'];
+          children: LLMProvider.providers.map((provider) {
+            final isSelected = _selectedProviderId == provider.id;
             return ListTile(
               leading: Icon(
-                provider['icon'] as IconData,
+                _getIconForProvider(provider.iconName),
                 color: isSelected
                     ? Theme.of(context).colorScheme.primary
                     : Colors.white54,
               ),
               title: Text(
-                provider['name'] as String,
+                provider.name,
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected
@@ -190,11 +192,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               onTap: () {
                 setState(() {
-                  _selectedProvider = provider['id'] as String;
+                  _selectedProviderId = provider.id;
                   // Reset model to first option when provider changes
-                  final models = List<String>.from(provider['models']);
-                  _selectedModel = models.first;
+                  _selectedModelId = provider.models.isNotEmpty
+                      ? provider.models.first.id
+                      : '';
                 });
+                _markChanged();
               },
             );
           }).toList(),
@@ -203,32 +207,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  IconData _getIconForProvider(String iconName) {
+    switch (iconName) {
+      case 'psychology':
+        return Icons.psychology;
+      case 'auto_awesome':
+        return Icons.auto_awesome;
+      case 'star':
+        return Icons.star;
+      case 'bolt':
+        return Icons.bolt;
+      case 'search':
+        return Icons.search;
+      case 'public':
+        return Icons.public;
+      default:
+        return Icons.smart_toy;
+    }
+  }
+
   Widget _buildModelDropdown() {
     final models = _currentModels;
-    if (!models.contains(_selectedModel)) {
-      _selectedModel = models.first;
+    if (models.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('No models available for this provider'),
+        ),
+      );
+    }
+
+    // Ensure selected model is valid
+    if (!models.any((m) => m.id == _selectedModelId)) {
+      _selectedModelId = models.first.id;
     }
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: DropdownButtonFormField<String>(
-          initialValue: _selectedModel,
+          initialValue: _selectedModelId,
           decoration: const InputDecoration(
             labelText: 'Model',
             border: InputBorder.none,
           ),
           items: models.map((model) {
             return DropdownMenuItem(
-              value: model,
-              child: Text(model),
+              value: model.id,
+              child: Text(model.displayName),
             );
           }).toList(),
           onChanged: (value) {
             if (value != null) {
               setState(() {
-                _selectedModel = value;
+                _selectedModelId = value;
               });
+              _markChanged();
             }
           },
         ),
@@ -246,6 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextField(
               controller: _apiKeyController,
               obscureText: _obscureApiKey,
+              onChanged: (_) => _markChanged(),
               decoration: InputDecoration(
                 labelText: 'API Key',
                 hintText: 'Enter your API key',
@@ -287,6 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 setState(() {
                   _speakResponses = value;
                 });
+                _markChanged();
               },
               contentPadding: EdgeInsets.zero,
             ),
@@ -316,6 +352,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     setState(() {
                       _speechRate = value;
                     });
+                    _markChanged();
                   },
                 ),
               ],
@@ -328,6 +365,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 setState(() {
                   _vibrateOnCommand = value;
                 });
+                _markChanged();
               },
               contentPadding: EdgeInsets.zero,
             ),
@@ -368,6 +406,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     setState(() {
                       _temperature = value;
                     });
+                    _markChanged();
                   },
                 ),
               ],
@@ -377,7 +416,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  // TODO: Test connection
+                  // TODO: Test connection - will be implemented in Phase 3
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Connection test will be available after LLM integration'),
+                    ),
+                  );
                 },
                 icon: const Icon(Icons.wifi_tethering),
                 label: const Text('Test Connection'),

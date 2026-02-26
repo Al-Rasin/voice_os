@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'app.dart';
+import 'providers/settings_provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Set preferred orientations
-  SystemChrome.setPreferredOrientations([
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
@@ -21,5 +23,16 @@ void main() {
     ),
   );
 
-  runApp(const VoiceOSApp());
+  // Initialize settings provider
+  final settingsProvider = SettingsProvider();
+  await settingsProvider.init();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: settingsProvider),
+      ],
+      child: const VoiceOSApp(),
+    ),
+  );
 }
