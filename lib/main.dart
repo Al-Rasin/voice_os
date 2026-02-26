@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
 import 'providers/accessibility_provider.dart';
+import 'providers/air_gesture_provider.dart';
 import 'providers/command_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/voice_provider.dart';
+import 'providers/wake_word_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +41,9 @@ void main() async {
   final commandProvider = CommandProvider();
   await commandProvider.init();
 
+  final airGestureProvider = AirGestureProvider();
+  final wakeWordProvider = WakeWordProvider();
+
   // Apply settings to voice provider
   voiceProvider.setSettings(
     vibrateOnCommand: settingsProvider.vibrateOnCommand,
@@ -62,6 +67,8 @@ void main() async {
         ChangeNotifierProvider.value(value: voiceProvider),
         ChangeNotifierProvider.value(value: accessibilityProvider),
         ChangeNotifierProvider.value(value: commandProvider),
+        ChangeNotifierProvider.value(value: airGestureProvider),
+        ChangeNotifierProvider.value(value: wakeWordProvider),
       ],
       child: const VoiceOSApp(),
     ),

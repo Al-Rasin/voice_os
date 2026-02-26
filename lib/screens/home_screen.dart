@@ -3,9 +3,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../providers/accessibility_provider.dart';
+import '../providers/air_gesture_provider.dart';
+import '../services/air_gesture_service.dart';
 import '../providers/command_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/voice_provider.dart';
+import '../providers/wake_word_provider.dart';
+import '../platform/native_bridge.dart';
+import 'hands_free_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
 
@@ -36,7 +41,46 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final voiceProvider = context.read<VoiceProvider>();
       voiceProvider.addListener(_onVoiceStateChanged);
+
+      // Set up wake word callback
+      final wakeWordProvider = context.read<WakeWordProvider>();
+      wakeWordProvider.onWakeWordDetected = _onWakeWordDetected;
+
+      // Set up air gesture callback
+      final airGestureProvider = context.read<AirGestureProvider>();
+      airGestureProvider.onGestureDetected = _onAirGestureDetected;
     });
+  }
+
+  void _onWakeWordDetected() {
+    final voiceProvider = context.read<VoiceProvider>();
+    if (!voiceProvider.isListening && !voiceProvider.isProcessing) {
+      _handleMicTap();
+    }
+  }
+
+  void _onAirGestureDetected(AirGesture gesture) async {
+    switch (gesture) {
+      case AirGesture.swipeLeft:
+        await NativeBridge.executeAction({'type': 'back'});
+        break;
+      case AirGesture.swipeRight:
+        await NativeBridge.executeAction({'type': 'recents'});
+        break;
+      case AirGesture.swipeUp:
+        await NativeBridge.executeAction({'type': 'scroll', 'direction': 'down'});
+        break;
+      case AirGesture.swipeDown:
+        await NativeBridge.executeAction({'type': 'scroll', 'direction': 'up'});
+        break;
+      case AirGesture.tap:
+        // Tap gesture could trigger mic
+        _handleMicTap();
+        break;
+      case AirGesture.none:
+        // Do nothing
+        break;
+    }
   }
 
   void _onVoiceStateChanged() {
@@ -71,9 +115,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void deactivate() {
-    // Remove listener when widget is deactivated
+    // Remove listeners when widget is deactivated
     try {
       context.read<VoiceProvider>().removeListener(_onVoiceStateChanged);
+      context.read<WakeWordProvider>().onWakeWordDetected = null;
+      context.read<AirGestureProvider>().onGestureDetected = null;
     } catch (e) {
       // Provider may not be available
     }
@@ -137,6 +183,16 @@ class _HomeScreenState extends State<HomeScreen>
       appBar: AppBar(
         title: const Text('VoiceOS'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.front_hand_outlined),
+            tooltip: 'Hands-Free Mode',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HandsFreeScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () {

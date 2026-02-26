@@ -22,6 +22,8 @@ class VoiceProvider extends ChangeNotifier {
   String _errorMessage = '';
   bool _vibrateOnCommand = true;
   bool _speakResponses = true;
+  bool _continuousListeningEnabled = false;
+  bool _isContinuousListening = false;
 
   VoiceState get state => _state;
   String get partialText => _partialText;
@@ -30,6 +32,8 @@ class VoiceProvider extends ChangeNotifier {
   String get errorMessage => _errorMessage;
   bool get isListening => _state == VoiceState.listening;
   bool get isProcessing => _state == VoiceState.processing;
+  bool get continuousListeningEnabled => _continuousListeningEnabled;
+  bool get isContinuousListening => _isContinuousListening;
 
   VoiceInputService get voiceInputService => _voiceInput;
   TTSService get ttsService => _tts;
@@ -173,6 +177,33 @@ class VoiceProvider extends ChangeNotifier {
     _responseText = '';
     _errorMessage = '';
     notifyListeners();
+
+    // If continuous listening is enabled, restart listening after reset
+    if (_isContinuousListening) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (_isContinuousListening && _state == VoiceState.idle) {
+          startListening();
+        }
+      });
+    }
+  }
+
+  // Continuous Listening Mode
+  void setContinuousListeningEnabled(bool enabled) {
+    _continuousListeningEnabled = enabled;
+    notifyListeners();
+  }
+
+  Future<void> startContinuousListening() async {
+    _isContinuousListening = true;
+    notifyListeners();
+    await startListening();
+  }
+
+  Future<void> stopContinuousListening() async {
+    _isContinuousListening = false;
+    await stopListening();
+    reset();
   }
 
   @override
