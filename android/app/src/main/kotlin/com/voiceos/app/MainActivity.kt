@@ -67,6 +67,12 @@ class MainActivity : FlutterActivity() {
                         requestOverlayPermission()
                         result.success(null)
                     }
+                    "getBatteryInfo" -> {
+                        result.success(getBatteryInfo())
+                    }
+                    "getVolumeLevel" -> {
+                        result.success(getVolumeLevel())
+                    }
                     else -> {
                         result.notImplemented()
                     }
@@ -268,11 +274,72 @@ class MainActivity : FlutterActivity() {
                     val query = intentData["query"] as? String
                     executor.openSpotify(query)
                 }
+                // Device Control
+                "toggle_flashlight" -> {
+                    val on = intentData["on"] as? Boolean
+                    executor.toggleFlashlight(on)
+                }
+                "set_volume" -> {
+                    val level = (intentData["level"] as? Number)?.toInt() ?: return false
+                    executor.setVolume(level)
+                }
+                "adjust_volume" -> {
+                    val direction = intentData["direction"] as? String ?: return false
+                    executor.adjustVolume(direction)
+                }
+                "set_ringer_mode" -> {
+                    val mode = intentData["mode"] as? String ?: return false
+                    executor.setRingerMode(mode)
+                }
+                "set_dnd" -> {
+                    val enabled = intentData["enabled"] as? Boolean ?: return false
+                    executor.setDoNotDisturb(enabled)
+                }
+                "get_battery" -> {
+                    // Returns battery level - handled by getBatteryInfo
+                    true
+                }
+                // Media Control
+                "media_play_pause" -> executor.mediaPlayPause()
+                "media_next" -> executor.mediaNext()
+                "media_previous" -> executor.mediaPrevious()
+                "media_stop" -> executor.mediaStop()
+                // Camera
+                "open_camera" -> executor.openCamera()
+                "open_video_camera" -> executor.openVideoCamera()
+                // Settings
+                "open_wifi_settings" -> executor.openWifiSettings()
+                "open_bluetooth_settings" -> executor.openBluetoothSettings()
+                "open_display_settings" -> executor.openDisplaySettings()
+                "open_sound_settings" -> executor.openSoundSettings()
+                "open_location_settings" -> executor.openLocationSettings()
+                "open_battery_settings" -> executor.openBatterySettings()
+                "open_settings" -> executor.openAllSettings()
+                // Notes
+                "create_note" -> {
+                    val title = intentData["title"] as? String ?: ""
+                    val content = intentData["content"] as? String ?: ""
+                    executor.createNote(title, content)
+                }
                 else -> false
             }
         } catch (e: Exception) {
             false
         }
+    }
+
+    // Add method to get battery info
+    fun getBatteryInfo(): Map<String, Any> {
+        val executor = IntentExecutor(this)
+        return mapOf(
+            "level" to executor.getBatteryLevel(),
+            "charging" to executor.isBatteryCharging()
+        )
+    }
+
+    fun getVolumeLevel(): Int {
+        val executor = IntentExecutor(this)
+        return executor.getVolume()
     }
 
     private fun getInstalledApps(): List<Map<String, String>> {

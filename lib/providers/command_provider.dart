@@ -105,6 +105,57 @@ class CommandProvider extends ChangeNotifier {
         return 'Pressed back';
       case 'press_home':
         return 'Pressed home';
+      case 'press_recents':
+        return 'Opened recents';
+      case 'flashlight_on':
+        return 'Flashlight on';
+      case 'flashlight_off':
+        return 'Flashlight off';
+      case 'toggle_flashlight':
+        return 'Toggled flashlight';
+      case 'volume_up':
+        return 'Volume up';
+      case 'volume_down':
+        return 'Volume down';
+      case 'volume_mute':
+        return 'Muted';
+      case 'volume_unmute':
+        return 'Unmuted';
+      case 'volume_max':
+        return 'Volume max';
+      case 'silent_mode':
+        return 'Silent mode';
+      case 'vibrate_mode':
+        return 'Vibrate mode';
+      case 'ring_mode':
+        return 'Ring mode';
+      case 'dnd_on':
+        return 'Do not disturb on';
+      case 'dnd_off':
+        return 'Do not disturb off';
+      case 'media_play_pause':
+      case 'play_pause':
+        return 'Play/Pause';
+      case 'media_next':
+      case 'next_track':
+        return 'Next track';
+      case 'media_previous':
+      case 'previous_track':
+        return 'Previous track';
+      case 'media_stop':
+        return 'Stopped media';
+      case 'open_camera':
+        return 'Opened camera';
+      case 'record_video':
+        return 'Recording video';
+      case 'open_wifi_settings':
+        return 'WiFi settings';
+      case 'open_bluetooth_settings':
+        return 'Bluetooth settings';
+      case 'open_settings':
+        return 'Opened settings';
+      case 'screenshot':
+        return 'Screenshot taken';
       case 'none':
         return 'Responded';
       default:

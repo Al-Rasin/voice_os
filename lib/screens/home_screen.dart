@@ -25,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  bool _listenersAttached = false;
 
   @override
   void initState() {
@@ -39,16 +40,19 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Listen for voice state changes to process commands
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final voiceProvider = context.read<VoiceProvider>();
-      voiceProvider.addListener(_onVoiceStateChanged);
+      if (!_listenersAttached) {
+        _listenersAttached = true;
+        final voiceProvider = context.read<VoiceProvider>();
+        voiceProvider.addListener(_onVoiceStateChanged);
 
-      // Set up wake word callback
-      final wakeWordProvider = context.read<WakeWordProvider>();
-      wakeWordProvider.onWakeWordDetected = _onWakeWordDetected;
+        // Set up wake word callback
+        final wakeWordProvider = context.read<WakeWordProvider>();
+        wakeWordProvider.onWakeWordDetected = _onWakeWordDetected;
 
-      // Set up air gesture callback
-      final airGestureProvider = context.read<AirGestureProvider>();
-      airGestureProvider.onGestureDetected = _onAirGestureDetected;
+        // Set up air gesture callback
+        final airGestureProvider = context.read<AirGestureProvider>();
+        airGestureProvider.onGestureDetected = _onAirGestureDetected;
+      }
     });
   }
 
@@ -109,21 +113,19 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    // Remove listeners when widget is disposed
+    if (_listenersAttached) {
+      try {
+        context.read<VoiceProvider>().removeListener(_onVoiceStateChanged);
+        context.read<WakeWordProvider>().onWakeWordDetected = null;
+        context.read<AirGestureProvider>().onGestureDetected = null;
+      } catch (e) {
+        // Provider may not be available
+      }
+      _listenersAttached = false;
+    }
     _pulseController.dispose();
     super.dispose();
-  }
-
-  @override
-  void deactivate() {
-    // Remove listeners when widget is deactivated
-    try {
-      context.read<VoiceProvider>().removeListener(_onVoiceStateChanged);
-      context.read<WakeWordProvider>().onWakeWordDetected = null;
-      context.read<AirGestureProvider>().onGestureDetected = null;
-    } catch (e) {
-      // Provider may not be available
-    }
-    super.deactivate();
   }
 
   Future<void> _handleMicTap() async {

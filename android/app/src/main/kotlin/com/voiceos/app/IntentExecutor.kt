@@ -1,13 +1,23 @@
 package com.voiceos.app
 
+import android.app.NotificationManager
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
+import android.hardware.camera2.CameraManager
+import android.media.AudioManager
 import android.net.Uri
+import android.os.BatteryManager
+import android.os.Build
 import android.provider.AlarmClock
 import android.provider.CalendarContract
+import android.provider.MediaStore
+import android.provider.Settings
+import android.view.KeyEvent
 
 class IntentExecutor(private val context: Context) {
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var flashlightOn = false
 
     fun openApp(packageName: String): Boolean {
         val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
@@ -195,7 +205,7 @@ class IntentExecutor(private val context: Context) {
         return true
     }
 
-    // Media
+    // Media Apps
     fun openSpotify(query: String?): Boolean {
         return try {
             if (query != null) {
@@ -208,6 +218,230 @@ class IntentExecutor(private val context: Context) {
             true
         } catch (e: Exception) {
             openApp("com.spotify.music")
+        }
+    }
+
+    // ==================== DEVICE CONTROL ====================
+
+    // Flashlight
+    fun toggleFlashlight(on: Boolean? = null): Boolean {
+        return try {
+            val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = cameraManager.cameraIdList[0]
+            val newState = on ?: !flashlightOn
+            cameraManager.setTorchMode(cameraId, newState)
+            flashlightOn = newState
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun isFlashlightOn(): Boolean = flashlightOn
+
+    // Volume Control
+    fun setVolume(level: Int, streamType: Int = AudioManager.STREAM_MUSIC): Boolean {
+        return try {
+            val maxVolume = audioManager.getStreamMaxVolume(streamType)
+            val targetVolume = (level.coerceIn(0, 100) * maxVolume / 100)
+            audioManager.setStreamVolume(streamType, targetVolume, AudioManager.FLAG_SHOW_UI)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun adjustVolume(direction: String): Boolean {
+        return try {
+            when (direction.lowercase()) {
+                "up" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+                "down" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+                "mute" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
+                "unmute" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, AudioManager.FLAG_SHOW_UI)
+                "max" -> setVolume(100)
+                else -> return false
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun getVolume(): Int {
+        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        return (currentVolume * 100 / maxVolume)
+    }
+
+    // Ringer Mode
+    fun setRingerMode(mode: String): Boolean {
+        return try {
+            val ringerMode = when (mode.lowercase()) {
+                "silent" -> AudioManager.RINGER_MODE_SILENT
+                "vibrate" -> AudioManager.RINGER_MODE_VIBRATE
+                "normal", "ring" -> AudioManager.RINGER_MODE_NORMAL
+                else -> return false
+            }
+            audioManager.ringerMode = ringerMode
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Do Not Disturb
+    fun setDoNotDisturb(enabled: Boolean): Boolean {
+        return try {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (!notificationManager.isNotificationPolicyAccessGranted) {
+                    // Open settings to grant DND access
+                    val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                    return false
+                }
+                val filter = if (enabled) NotificationManager.INTERRUPTION_FILTER_NONE else NotificationManager.INTERRUPTION_FILTER_ALL
+                notificationManager.setInterruptionFilter(filter)
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Battery Info
+    fun getBatteryLevel(): Int {
+        val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        return batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    }
+
+    fun isBatteryCharging(): Boolean {
+        val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        return batteryManager.isCharging
+    }
+
+    // Media Playback Control
+    fun mediaPlayPause(): Boolean {
+        return sendMediaKeyEvent(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+    }
+
+    fun mediaNext(): Boolean {
+        return sendMediaKeyEvent(KeyEvent.KEYCODE_MEDIA_NEXT)
+    }
+
+    fun mediaPrevious(): Boolean {
+        return sendMediaKeyEvent(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+    }
+
+    fun mediaStop(): Boolean {
+        return sendMediaKeyEvent(KeyEvent.KEYCODE_MEDIA_STOP)
+    }
+
+    private fun sendMediaKeyEvent(keyCode: Int): Boolean {
+        return try {
+            val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, keyCode)
+            val upEvent = KeyEvent(KeyEvent.ACTION_UP, keyCode)
+            audioManager.dispatchMediaKeyEvent(downEvent)
+            audioManager.dispatchMediaKeyEvent(upEvent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Camera
+    fun openCamera(): Boolean {
+        return try {
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun openVideoCamera(): Boolean {
+        return try {
+            val intent = Intent(MediaStore.ACTION_VIDEO_CAPTURE)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Settings Pages
+    fun openWifiSettings(): Boolean {
+        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
+
+    fun openBluetoothSettings(): Boolean {
+        val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
+
+    fun openDisplaySettings(): Boolean {
+        val intent = Intent(Settings.ACTION_DISPLAY_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
+
+    fun openSoundSettings(): Boolean {
+        val intent = Intent(Settings.ACTION_SOUND_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
+
+    fun openLocationSettings(): Boolean {
+        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
+
+    fun openAppSettings(): Boolean {
+        val intent = Intent(Settings.ACTION_APPLICATION_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
+
+    fun openBatterySettings(): Boolean {
+        val intent = Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
+
+    fun openAllSettings(): Boolean {
+        val intent = Intent(Settings.ACTION_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
+
+    // Notes/Memo
+    fun createNote(title: String, content: String): Boolean {
+        return try {
+            val intent = Intent(Intent.ACTION_SEND)
+            intent.type = "text/plain"
+            intent.putExtra(Intent.EXTRA_SUBJECT, title)
+            intent.putExtra(Intent.EXTRA_TEXT, content)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(Intent.createChooser(intent, "Save note to").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 }

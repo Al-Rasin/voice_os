@@ -34,6 +34,10 @@ class CommandPipeline {
     // Check for quick commands first (no LLM needed)
     final quickResult = quickHandler.tryHandle(spokenText);
     if (quickResult != null) {
+      // Handle battery query specially (needs async call)
+      if (quickResult.speak == 'Checking battery...') {
+        return await _handleBatteryQuery();
+      }
       return quickResult;
     }
 
@@ -81,9 +85,8 @@ class CommandPipeline {
       // Step 6: Update conversation history (keep last 6 messages)
       conversationHistory.add(ChatMessage.user(spokenText));
       conversationHistory.add(ChatMessage.assistant(response.rawText));
-      if (conversationHistory.length > 6) {
-        conversationHistory =
-            conversationHistory.sublist(conversationHistory.length - 6);
+      while (conversationHistory.length > 6) {
+        conversationHistory.removeAt(0);
       }
 
       // Step 7: Return parsed result
@@ -100,5 +103,34 @@ class CommandPipeline {
   void clearHistory() {
     conversationHistory.clear();
     _lastInteraction = null;
+  }
+
+  Future<PipelineResult> _handleBatteryQuery() async {
+    try {
+      final batteryInfo = await NativeBridge.getBatteryInfo();
+      final level = batteryInfo['level'] as int? ?? -1;
+      final charging = batteryInfo['charging'] as bool? ?? false;
+
+      String response;
+      if (level < 0) {
+        response = "Sorry, I couldn't get battery information.";
+      } else if (charging) {
+        response = "Battery is at $level% and charging.";
+      } else {
+        response = "Battery is at $level%.";
+      }
+
+      return PipelineResult.success(
+        thought: 'Battery query',
+        actions: [],
+        speak: response,
+      );
+    } catch (e) {
+      return PipelineResult.success(
+        thought: 'Battery query failed',
+        actions: [],
+        speak: "Sorry, I couldn't get battery information.",
+      );
+    }
   }
 }

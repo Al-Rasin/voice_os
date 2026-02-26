@@ -122,4 +122,27 @@ class NativeBridge {
       return false;
     }
   }
+
+  /// Get battery info (level and charging status)
+  static Future<Map<String, dynamic>> getBatteryInfo() async {
+    try {
+      final result = await _channel.invokeMethod('getBatteryInfo');
+      if (result != null) {
+        return Map<String, dynamic>.from(result);
+      }
+    } catch (e) {
+      // Return default
+    }
+    return {'level': -1, 'charging': false};
+  }
+
+  /// Get current volume level (0-100)
+  static Future<int> getVolumeLevel() async {
+    try {
+      final result = await _channel.invokeMethod<int>('getVolumeLevel');
+      return result ?? 50;
+    } catch (e) {
+      return 50;
+    }
+  }
 }

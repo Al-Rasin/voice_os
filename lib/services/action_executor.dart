@@ -150,6 +150,126 @@ class ActionExecutor {
             'text': action.params['text'],
           });
 
+        // --- Device Control Actions ---
+        case 'toggle_flashlight':
+          return _callIntent({
+            'type': 'toggle_flashlight',
+            'on': action.params['on'],
+          });
+
+        case 'flashlight_on':
+          return _callIntent({'type': 'toggle_flashlight', 'on': true});
+
+        case 'flashlight_off':
+          return _callIntent({'type': 'toggle_flashlight', 'on': false});
+
+        case 'set_volume':
+          return _callIntent({
+            'type': 'set_volume',
+            'level': action.params['level'],
+          });
+
+        case 'volume_up':
+          return _callIntent({'type': 'adjust_volume', 'direction': 'up'});
+
+        case 'volume_down':
+          return _callIntent({'type': 'adjust_volume', 'direction': 'down'});
+
+        case 'volume_mute':
+          return _callIntent({'type': 'adjust_volume', 'direction': 'mute'});
+
+        case 'volume_unmute':
+          return _callIntent({'type': 'adjust_volume', 'direction': 'unmute'});
+
+        case 'volume_max':
+          return _callIntent({'type': 'adjust_volume', 'direction': 'max'});
+
+        case 'set_ringer_mode':
+          return _callIntent({
+            'type': 'set_ringer_mode',
+            'mode': action.params['mode'],
+          });
+
+        case 'silent_mode':
+          return _callIntent({'type': 'set_ringer_mode', 'mode': 'silent'});
+
+        case 'vibrate_mode':
+          return _callIntent({'type': 'set_ringer_mode', 'mode': 'vibrate'});
+
+        case 'ring_mode':
+          return _callIntent({'type': 'set_ringer_mode', 'mode': 'normal'});
+
+        case 'dnd_on':
+          return _callIntent({'type': 'set_dnd', 'enabled': true});
+
+        case 'dnd_off':
+          return _callIntent({'type': 'set_dnd', 'enabled': false});
+
+        // --- Media Control Actions ---
+        case 'media_play_pause':
+        case 'play_pause':
+        case 'pause':
+        case 'play':
+          return _callIntent({'type': 'media_play_pause'});
+
+        case 'media_next':
+        case 'next_track':
+        case 'skip':
+          return _callIntent({'type': 'media_next'});
+
+        case 'media_previous':
+        case 'previous_track':
+          return _callIntent({'type': 'media_previous'});
+
+        case 'media_stop':
+        case 'stop_music':
+          return _callIntent({'type': 'media_stop'});
+
+        // --- Camera Actions ---
+        case 'open_camera':
+        case 'take_photo':
+          return _callIntent({'type': 'open_camera'});
+
+        case 'record_video':
+          return _callIntent({'type': 'open_video_camera'});
+
+        // --- Settings Actions ---
+        case 'open_wifi_settings':
+        case 'wifi_settings':
+          return _callIntent({'type': 'open_wifi_settings'});
+
+        case 'open_bluetooth_settings':
+        case 'bluetooth_settings':
+          return _callIntent({'type': 'open_bluetooth_settings'});
+
+        case 'open_display_settings':
+        case 'brightness_settings':
+          return _callIntent({'type': 'open_display_settings'});
+
+        case 'open_sound_settings':
+        case 'sound_settings':
+          return _callIntent({'type': 'open_sound_settings'});
+
+        case 'open_location_settings':
+        case 'location_settings':
+          return _callIntent({'type': 'open_location_settings'});
+
+        case 'open_battery_settings':
+        case 'battery_settings':
+          return _callIntent({'type': 'open_battery_settings'});
+
+        case 'open_settings':
+        case 'settings':
+          return _callIntent({'type': 'open_settings'});
+
+        // --- Notes ---
+        case 'create_note':
+          return _callIntent({
+            'type': 'create_note',
+            'title': action.params['title'] ?? '',
+            'content': action.params['content'] ?? action.params['text'] ?? '',
+          });
+
         // --- Accessibility Actions ---
         case 'tap':
           final resolved = _resolveElementBounds(action, screenContext);

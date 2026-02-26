@@ -24,6 +24,7 @@ class VoiceProvider extends ChangeNotifier {
   bool _speakResponses = true;
   bool _continuousListeningEnabled = false;
   bool _isContinuousListening = false;
+  bool _isDisposed = false;
 
   VoiceState get state => _state;
   String get partialText => _partialText;
@@ -117,13 +118,15 @@ class VoiceProvider extends ChangeNotifier {
   }
 
   void _onError(String error) {
+    if (_isDisposed) return;
+
     _errorMessage = error;
     _state = VoiceState.error;
     notifyListeners();
 
     // Auto-reset after showing error
     Future.delayed(const Duration(seconds: 3), () {
-      if (_state == VoiceState.error) {
+      if (!_isDisposed && _state == VoiceState.error) {
         reset();
       }
     });
@@ -135,6 +138,8 @@ class VoiceProvider extends ChangeNotifier {
   }
 
   void setResponse(String response) {
+    if (_isDisposed) return;
+
     _responseText = response;
     _state = VoiceState.success;
 
@@ -151,26 +156,30 @@ class VoiceProvider extends ChangeNotifier {
 
     // Auto-reset after showing response
     Future.delayed(const Duration(seconds: 5), () {
-      if (_state == VoiceState.success) {
+      if (!_isDisposed && _state == VoiceState.success) {
         reset();
       }
     });
   }
 
   void setError(String error) {
+    if (_isDisposed) return;
+
     _errorMessage = error;
     _state = VoiceState.error;
     notifyListeners();
 
     // Auto-reset after showing error
     Future.delayed(const Duration(seconds: 3), () {
-      if (_state == VoiceState.error) {
+      if (!_isDisposed && _state == VoiceState.error) {
         reset();
       }
     });
   }
 
   void reset() {
+    if (_isDisposed) return;
+
     _state = VoiceState.idle;
     _partialText = '';
     _finalText = '';
@@ -181,7 +190,7 @@ class VoiceProvider extends ChangeNotifier {
     // If continuous listening is enabled, restart listening after reset
     if (_isContinuousListening) {
       Future.delayed(const Duration(milliseconds: 500), () {
-        if (_isContinuousListening && _state == VoiceState.idle) {
+        if (!_isDisposed && _isContinuousListening && _state == VoiceState.idle) {
           startListening();
         }
       });
@@ -208,6 +217,8 @@ class VoiceProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _isContinuousListening = false;
     _voiceInput.dispose();
     _tts.dispose();
     super.dispose();
