@@ -49,6 +49,24 @@ class MainActivity : FlutterActivity() {
                         val apps = getInstalledApps()
                         result.success(apps)
                     }
+                    "startFloatingWidget" -> {
+                        val success = startFloatingWidget()
+                        result.success(success)
+                    }
+                    "stopFloatingWidget" -> {
+                        stopFloatingWidget()
+                        result.success(true)
+                    }
+                    "isFloatingWidgetRunning" -> {
+                        result.success(FloatingWidgetService.isRunning)
+                    }
+                    "canDrawOverlays" -> {
+                        result.success(canDrawOverlays())
+                    }
+                    "requestOverlayPermission" -> {
+                        requestOverlayPermission()
+                        result.success(null)
+                    }
                     else -> {
                         result.notImplemented()
                     }
@@ -259,5 +277,42 @@ class MainActivity : FlutterActivity() {
                 "packageName" to resolveInfo.activityInfo.packageName
             )
         }.sortedBy { it["name"]?.lowercase() }
+    }
+
+    // Floating Widget methods
+    private fun canDrawOverlays(): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(this)
+        } else {
+            true
+        }
+    }
+
+    private fun requestOverlayPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:$packageName")
+            )
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+        }
+    }
+
+    private fun startFloatingWidget(): Boolean {
+        if (!canDrawOverlays()) return false
+
+        val intent = Intent(this, FloatingWidgetService::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+        return true
+    }
+
+    private fun stopFloatingWidget() {
+        val intent = Intent(this, FloatingWidgetService::class.java)
+        stopService(intent)
     }
 }

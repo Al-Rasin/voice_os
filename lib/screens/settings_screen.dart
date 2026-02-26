@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/app_settings.dart';
 import '../models/llm_provider.dart';
+import '../platform/native_bridge.dart';
 import '../providers/settings_provider.dart';
 import '../services/llm/llm_client_factory.dart';
 
@@ -17,6 +18,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _obscureApiKey = true;
   bool _hasUnsavedChanges = false;
   bool _isTesting = false;
+  bool _floatingWidgetEnabled = false;
+  bool _canDrawOverlays = false;
 
   // Local state for editing
   late String _selectedProviderId;
@@ -31,6 +34,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _apiKeyController = TextEditingController();
     _loadCurrentSettings();
+    _checkFloatingWidgetStatus();
+  }
+
+  Future<void> _checkFloatingWidgetStatus() async {
+    final canDraw = await NativeBridge.canDrawOverlays();
+    final isRunning = await NativeBridge.isFloatingWidgetRunning();
+    setState(() {
+      _canDrawOverlays = canDraw;
+      _floatingWidgetEnabled = isRunning;
+    });
   }
 
   void _loadCurrentSettings() {
@@ -211,6 +224,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSectionHeader('Advanced'),
             const SizedBox(height: 12),
             _buildAdvancedSettings(),
+            const SizedBox(height: 24),
+
+            // Section 5: Floating Widget
+            _buildSectionHeader('Floating Widget'),
+            const SizedBox(height: 12),
+            _buildFloatingWidgetSettings(),
             const SizedBox(height: 32),
 
             // Save Button
@@ -509,6 +528,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 label: Text(_isTesting ? 'Testing...' : 'Test Connection'),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingWidgetSettings() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              title: const Text('Enable floating button'),
+              subtitle: const Text('Show a floating mic button on screen'),
+              value: _floatingWidgetEnabled,
+              onChanged: _canDrawOverlays
+                  ? (value) async {
+                      if (value) {
+                        final success = await NativeBridge.startFloatingWidget();
+                        setState(() {
+                          _floatingWidgetEnabled = success;
+                        });
+                      } else {
+                        await NativeBridge.stopFloatingWidget();
+                        setState(() {
+                          _floatingWidgetEnabled = false;
+                        });
+                      }
+                    }
+                  : null,
+              contentPadding: EdgeInsets.zero,
+            ),
+            if (!_canDrawOverlays) ...[
+              const Divider(),
+              Row(
+                children: [
+                  const Icon(Icons.warning, color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Overlay permission required',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await NativeBridge.requestOverlayPermission();
+                      // Check again after returning
+                      Future.delayed(const Duration(seconds: 1), () {
+                        _checkFloatingWidgetStatus();
+                      });
+                    },
+                    child: const Text('Grant'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

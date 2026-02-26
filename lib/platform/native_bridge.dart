@@ -74,4 +74,52 @@ class NativeBridge {
     }
     return [];
   }
+
+  /// Check if overlay permission is granted
+  static Future<bool> canDrawOverlays() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('canDrawOverlays');
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Request overlay permission
+  static Future<void> requestOverlayPermission() async {
+    try {
+      await _channel.invokeMethod('requestOverlayPermission');
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+
+  /// Start floating widget service
+  static Future<bool> startFloatingWidget() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('startFloatingWidget');
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Stop floating widget service
+  static Future<void> stopFloatingWidget() async {
+    try {
+      await _channel.invokeMethod('stopFloatingWidget');
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+
+  /// Check if floating widget is running
+  static Future<bool> isFloatingWidgetRunning() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('isFloatingWidgetRunning');
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
 }
