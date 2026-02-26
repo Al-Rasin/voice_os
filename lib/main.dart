@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
 import 'providers/accessibility_provider.dart';
+import 'providers/command_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/voice_provider.dart';
 
@@ -35,6 +36,9 @@ void main() async {
   final accessibilityProvider = AccessibilityProvider();
   await accessibilityProvider.init();
 
+  final commandProvider = CommandProvider();
+  await commandProvider.init();
+
   // Apply settings to voice provider
   voiceProvider.setSettings(
     vibrateOnCommand: settingsProvider.vibrateOnCommand,
@@ -48,6 +52,7 @@ void main() async {
         ChangeNotifierProvider.value(value: settingsProvider),
         ChangeNotifierProvider.value(value: voiceProvider),
         ChangeNotifierProvider.value(value: accessibilityProvider),
+        ChangeNotifierProvider.value(value: commandProvider),
       ],
       child: const VoiceOSApp(),
     ),

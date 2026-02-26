@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../providers/accessibility_provider.dart';
+import '../providers/command_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/voice_provider.dart';
 import 'settings_screen.dart';
@@ -29,11 +30,49 @@ class _HomeScreenState extends State<HomeScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    // Listen for voice state changes to process commands
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final voiceProvider = context.read<VoiceProvider>();
+      voiceProvider.addListener(_onVoiceStateChanged);
+    });
+  }
+
+  void _onVoiceStateChanged() {
+    final voiceProvider = context.read<VoiceProvider>();
+    if (voiceProvider.state == VoiceState.processing &&
+        voiceProvider.finalText.isNotEmpty) {
+      _processVoiceCommand(voiceProvider.finalText);
+    }
+  }
+
+  Future<void> _processVoiceCommand(String text) async {
+    final voiceProvider = context.read<VoiceProvider>();
+    final commandProvider = context.read<CommandProvider>();
+    final settingsProvider = context.read<SettingsProvider>();
+
+    try {
+      final response = await commandProvider.processVoiceCommand(
+        text,
+        settingsProvider.settings,
+      );
+      voiceProvider.setResponse(response);
+    } catch (e) {
+      voiceProvider.setError('Error: $e');
+    }
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    // Remove listener
+    if (mounted) {
+      try {
+        context.read<VoiceProvider>().removeListener(_onVoiceStateChanged);
+      } catch (e) {
+        // Provider may not be available
+      }
+    }
     super.dispose();
   }
 
